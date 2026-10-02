@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sopa de Letras 3D</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(180deg, #f4f7fb 0%, #e2e8f0 100%);
+    min-height: 100vh;
+    margin: 0;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #334155;
+  }
+
+  h1 {
+    color: #1e56a0;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 25px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Contenedor principal estilo tarjeta 3D */
+  .contenedor-juego {
+    background: #f8fafc;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 
+                inset 0 2px 3px rgba(255, 255, 255, 0.8);
+    border: 1px solid #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 800px;
+  }
+
+  /* Grid del tablero */
+  .tablero {
+    display: grid;
+    grid-template-columns: repeat(18, 32px);
+    gap: 4px;
+    justify-content: center;
+    background: #e2e8f0;
+    padding: 12px;
+    border-radius: 16px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Fichas individuales con efecto 3D */
+  .celda {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #334155;
+    box-shadow: 0 3px 0px #cbd5e1, 0 4px 6px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    user-select: none;
+  }
+
+  /* Área de controles */
+  .panel-controles {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .entrada-palabra {
+    width: 320px;
+    padding: 12px 18px;
+    font-size: 15px;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    text-align: center;
+    outline: none;
+    background: #ffffff;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+    transition: all 0.3s ease;
+  }
+
+  .entrada-palabra::placeholder {
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  /* Estilos dinámicos dentro del input */
+  .input-error {
+    color: #dc2626 !important;
+    font-weight: bold;
+    border-color: #fca5a5 !important;
+    background-color: #fef2f2 !important;
+  }
+
+  .input-info {
+    color: #2563eb !important;
+    font-weight: bold;
+    border-color: #93c5fd !important;
+    background-color: #eff6ff !important;
+  }
+
+  /* Botones estilo 3D */
+  .btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-buscar {
+    background: #f1f5f9;
+    color: #1e293b;
+    box-shadow: 0 4px 0 #cbd5e1, 0 5px 10px rgba(0,0,0,0.05);
+  }
+
+  .btn-buscar:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-buscar:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #cbd5e1;
+  }
+
+  .btn-borrar {
+    background: #f1f5f9;
+    color: #475569;
+    box-shadow: 0 4px 0 #cbd5e1, 0 5px 10px rgba(0,0,0,0.05);
+  }
+
+  .btn-borrar:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-borrar:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #cbd5e1;
+  }
+</style>
+</head>
+<body>
+
+<h1>Sopa de Letras</h1>
+
+<div class="contenedor-juego">
+  <div class="tablero" id="tablero"></div>
+
+  <div class="panel-controles">
+    <input type="text" id="entrada" class="entrada-palabra" placeholder="Escribe aquí tu palabra a encontrar">
+    <button class="btn btn-buscar" onclick="buscarPalabra()">Buscar</button>
+    <button class="btn btn-borrar" onclick="borrarResaltados()">Borrar</button>
+  </div>
+</div>
+
+<script>
+  const palabrasPermitidas = [
+    "CONTRATO","INGRESO","VACANTE","ENTREVISTA","SELECCION","COMPETENCIAS",
+    "PLANIFICACION","ORGANIZACION","ADMINISTRACION","INSTRUCTORES","TALENTO",
+    "TECNICO","HUMANO","APRENDICES","CONVOCATORIA","AFILIACION","INDUCCION",
+    "CAPACITAR","NOMINA"
+  ];
+
+  const letras = [
+    "A D M I N I S T R A C X C O N T R U",
+    "I N N O I C A C I F I N A L P E X O",
+    "A F I L O R G A Z A C P P U L N O R",
+    "V A C A N D E I C A R K A A I T I G",
+    "O R S A I C N E T E P M O C L R R A",
+    "A F E L I A C L N E N T R E V E L N",
+    "D O L E G O K D N U X I N G R E S O",
+    "M C E R T I I T A L E N T O A T E I",
+    "I N O D U C R I O C I N C E T R I C",
+    "N D U N E E H U M I A O P N I S N A",
+    "I N T S V I S T U I N D U H C E S Z",
+    "S I P I N O C O N T R D U C A L T I",
+    "T A S E M L C O R I O M U S P E R N",
+    "R T E T N A C A V E A L E C A C U A",
+    "A A M O P C T E T N T E C N C C C G",
+    "C L A L R O M P O O L E I O N I T R",
+    "I N G R E X O N O M R I P R E O O O",
+    "O E L E C I C O M I S I A M U N R N",
+    "N S E R G N I Z A N O R A C O M E A",
+    "P L A N I N O I C A I L I F A C S T"
+  ];
+
+  const tablero = document.getElementById("tablero");
+  const celdas = [];
+  const resaltadas = new Set();
+  let temporizadorInput = null;
+
+  // Contexto de Audio Web
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  // Reproducir sonido de tecla de xilófono
+  function sonarXilofono(esUltima = false) {
+    initAudio();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    osc.type = 'sine'; // Onda senoidal limpia tipo xilófono
+
+    // La última letra tiene un tono más alto y resonante
+    const frecuenciaBase = esUltima ? 880 : 587.33; // Nota A5 vs D5
+    const duracion = esUltima ? 0.8 : 0.25;
+    const volumenInicial = esUltima ? 0.6 : 0.3;
+
+    osc.frequency.setValueAtTime(frecuenciaBase, audioCtx.currentTime);
+
+    // Curva de envolvente para imitar golpe de mazo en lámina de xilófono
+    gainNode.gain.setValueAtTime(volumenInicial, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duracion);
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + duracion);
+  }
+
+  // Generar cuadrícula con estética 3D
+  letras.forEach((fila, i) => {
+    const letrasFila = fila.split(" ");
+    celdas[i] = [];
+    letrasFila.forEach((letra, j) => {
+      const div = document.createElement("div");
+      div.classList.add("celda");
+      div.textContent = letra;
+      tablero.appendChild(div);
+      celdas[i][j] = div;
+    });
+  });
+
+  // Mostrar mensaje dentro del input por 2 segundos
+  function mostrarMensajeEnInput(texto, claseEstilo) {
+    const entrada = document.getElementById("entrada");
+    
+    if (temporizadorInput) clearTimeout(temporizadorInput);
+
+    entrada.value = texto;
+    entrada.className = "entrada-palabra " + claseEstilo;
+    entrada.disabled = true;
+
+    temporizadorInput = setTimeout(() => {
+      entrada.value = "";
+      entrada.className = "entrada-palabra";
+      entrada.disabled = false;
+      entrada.focus();
+    }, 2000);
+  }
+
+  function buscarPalabra() {
+    initAudio();
+    const entrada = document.getElementById("entrada");
+    const palabra = entrada.value.trim().toUpperCase();
+
+    if (!palabra) return;
+
+    if (!palabrasPermitidas.includes(palabra)) {
+      mostrarMensajeEnInput("ERROR", "input-error");
+      return;
+    }
+
+    if (resaltadas.has(palabra)) {
+      mostrarMensajeEnInput("YA ESTÁ RESALTADA", "input-info");
+      return;
+    }
+
+    let encontrada = false;
+    const direcciones = [
+      [0,1], [0,-1], [1,0], [-1,0],
+      [1,1], [1,-1], [-1,1], [-1,-1]
+    ];
+
+    for (let i = 0; i < celdas.length; i++) {
+      for (let j = 0; j < celdas[i].length; j++) {
+        if (celdas[i][j].textContent === palabra[0]) {
+          for (const [dx, dy] of direcciones) {
+            if (verificar(i, j, dx, dy, palabra)) {
+              encontrada = true;
+              resaltar(i, j, dx, dy, palabra.length);
+              resaltadas.add(palabra);
+              break;
+            }
+          }
+        }
+        if (encontrada) break;
+      }
+      if (encontrada) break;
+    }
+
+    if (!encontrada) {
+      mostrarMensajeEnInput("ERROR", "input-error");
+    } else {
+      entrada.value = "";
+    }
+  }
+
+  function verificar(x, y, dx, dy, palabra) {
+    for (let k = 0; k < palabra.length; k++) {
+      const nx = x + dx * k, ny = y + dy * k;
+      if (nx < 0 || ny < 0 || nx >= celdas.length || ny >= celdas[0].length) return false;
+      if (celdas[nx][ny].textContent !== palabra[k]) return false;
+    }
+    return true;
+  }
+
+  function resaltar(x, y, dx, dy, longitud) {
+    const colorPalabra = getColor();
+    for (let k = 0; k < longitud; k++) {
+      setTimeout(() => {
+        const nx = x + dx * k, ny = y + dy * k;
+        celdas[nx][ny].style.background = colorPalabra;
+        celdas[nx][ny].style.color = "white";
+        celdas[nx][ny].style.boxShadow = "0 3px 0px rgba(0,0,0,0.2)";
+        
+        // Determinar si es la última letra de la palabra
+        const esUltima = (k === longitud - 1);
+        sonarXilofono(esUltima);
+      }, k * 180);
+    }
+  }
+
+  function borrarResaltados() {
+    for (let i = 0; i < celdas.length; i++) {
+      for (let j = 0; j < celdas[i].length; j++) {
+        celdas[i][j].style.background = "#ffffff";
+        celdas[i][j].style.color = "#334155";
+        celdas[i][j].style.boxShadow = "0 3px 0px #cbd5e1, 0 4px 6px rgba(0,0,0,0.05)";
+      }
+    }
+    resaltadas.clear();
+    const entrada = document.getElementById("entrada");
+    entrada.value = "";
+    entrada.className = "entrada-palabra";
+    entrada.disabled = false;
+  }
+
+  const colores = ["#ef4444","#3b82f6","#10b981","#8b5cf6","#f59e0b","#14b8a6","#f97316"];
+  let colorIndex = 0;
+  function getColor() {
+    const color = colores[colorIndex % colores.length];
+    colorIndex++;
+    return color;
+  }
+
+  document.getElementById("entrada").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      buscarPalabra();
+    }
+  });
+</script>
+</body>
+</html>
